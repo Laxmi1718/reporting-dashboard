@@ -38,8 +38,6 @@ export default function ChartsSection({
   const [trendLoading, setTrendLoading] = useState(false);
 
   const handleGranularityChange = (value) => {
-    // Default the custom range to whatever the dashboard-wide From/To fields
-    // currently show, so switching to Custom starts from a sensible window.
     if (value === CUSTOM) {
       setCustomFrom(dayjs(fromDate));
       setCustomTo(dayjs(toDate));
@@ -49,25 +47,15 @@ export default function ChartsSection({
 
   useEffect(() => {
     if (!app) return undefined;
-    // Non-custom granularities bucket the SAME From/To window picked above -
-    // the selector only changes how it's grouped (week/month/quarter/year),
-    // not the window itself. Custom lets the chart look at its own window.
+
     const range = granularity === CUSTOM ? { from: customFrom, to: customTo } : { from: dayjs(fromDate), to: dayjs(toDate) };
     if (!range.from?.isValid() || !range.to?.isValid()) return undefined;
 
     let ignore = false;
-    // Mirrors useDashboardData's fetch-on-filter-change pattern: this effect
-    // exists to kick off the request, so setting loading state before the
-    // first await is expected, not an unintended cascade.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+
     setTrendLoading(true);
 
-    // Live apps' API only returns aggregate totals for whatever single
-    // window it's queried with - it doesn't have a historical series of its
-    // own. So for a real bucketed trend, fan out one real request per
-    // bucket and read each bucket's own current-period totals, instead of
-    // fabricating history. Mock apps already bucket server-side in one call,
-    // and Custom is a single specific window for any app, so both skip this.
+
     const loadTrend = async () => {
       if (isLive(app) && granularity !== CUSTOM) {
         const buckets = buildTrendBucketRanges(granularity, range.from, range.to);

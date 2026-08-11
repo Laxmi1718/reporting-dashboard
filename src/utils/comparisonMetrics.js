@@ -1,5 +1,4 @@
-// Shared between ComparisonTable (on-screen) and the Excel export so both
-// always agree on which metrics exist and how each value is read.
+
 export const BASE_METRICS = [
   { key: 'totalLogin', label: 'Total Login', decimals: 0, get: (p) => p.totalLogin },
   { key: 'activeUsers', label: 'Active Users', decimals: 0, get: (p) => p.activeUsers },
@@ -28,8 +27,7 @@ export const NEW_LOGINS_METRIC = {
   get: (p) => p.newLogins,
 };
 
-// Training/e-learning/new-logins rows only appear when the current period
-// actually carries that data (i.e. the app's API reports it).
+
 export function getComparisonMetrics(currentPeriod) {
   return [
     ...BASE_METRICS,

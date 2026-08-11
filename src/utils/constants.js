@@ -1,4 +1,4 @@
-export const APPLICATIONS = ['CRM', 'LMS','MYIB', 'Grim', 'Procurement', 'IdeaBank', 'HRMS'];
+export const APPLICATIONS = ['CRM', 'LMS','MYIB', 'Grim', 'IdeaBank', 'HRMS'];
 
 export const REPORT_TYPES = [
   'Daily',
@@ -10,8 +10,6 @@ export const REPORT_TYPES = [
   'Custom Date Range',
 ];
 
-// Granularity options for the trend charts' own period filter (Login Trend /
-// Active Users) - independent of the dashboard-wide FilterBar above.
 export const TREND_REPORT_TYPES = ['Weekly', 'Monthly', 'Quarterly', 'Yearly', 'Custom Date Range'];
 
 // Validated reference categorical palette (see dataviz skill / references/palette.md)
@@ -40,8 +38,6 @@ export const STATUS_COLORS = {
   critical: '#d03b3b',
 };
 
-// Period Comparison table: current-vs-previous highlight for the Current
-// Period cell (higher/equal/lower) - light tints only, nothing else.
 export const COMPARISON_HIGHLIGHT = {
   higher: '#DCFCE7',
   equal: '#DBEAFE',

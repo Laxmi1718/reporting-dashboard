@@ -1,8 +1,4 @@
-// Splits an overall [from, to] window into calendar sub-ranges for a given
-// trend granularity - used to fan out one real API call per bucket for live
-// apps, whose backend only returns aggregate totals for a single queried
-// window (no historical series of its own). Capped to keep the fan-out
-// bounded on wide date ranges.
+
 const MAX_BUCKETS = 24;
 
 function clip(bucketFrom, bucketTo, from, to) {
@@ -32,8 +28,19 @@ export function buildTrendBucketRanges(reportType, from, to) {
   } else if (reportType === 'Quarterly') {
     let cursor = from.month(Math.floor(from.month() / 3) * 3).startOf('month');
     while (!cursor.isAfter(to) && buckets.length < MAX_BUCKETS) {
-      const { from: bucketFrom, to: bucketTo } = clip(cursor, cursor.add(2, 'month').endOf('month'), from, to);
-      buckets.push({ label: `Q${Math.floor(cursor.month() / 3) + 1} '${cursor.format('YY')}`, from: bucketFrom, to: bucketTo });
+      const quarterEnd = cursor.add(2, 'month');
+      const { from: bucketFrom, to: bucketTo } = clip(cursor, quarterEnd.endOf('month'), from, to);
+
+      const startMonth = cursor.format('MMM');
+      const endMonth = quarterEnd.format('MMM');
+      const yearSuffix = cursor.format('YY');
+
+      buckets.push({
+        label: `${startMonth} - ${endMonth} '${yearSuffix}`,
+        from: bucketFrom,
+        to: bucketTo,
+      });
+
       cursor = cursor.add(3, 'month');
     }
   } else if (reportType === 'Yearly') {

@@ -1,7 +1,5 @@
 import { createTheme } from '@mui/material/styles';
 
-// Truecaller-style palette: a vivid blue-to-cyan gradient for the header and
-// primary actions, white cards with soft shadows and generous rounding.
 export const GRADIENT_PRIMARY = 'linear-gradient(135deg, #0061FF 0%, #00C2FF 100%)';
 
 const theme = createTheme({

@@ -1,9 +1,4 @@
 import dayjs from 'dayjs';
-
-// The report-type dropdown is a preset picker for the From/To fields, not a
-// parameter sent to the API - only the resulting date range is. Custom Date
-// Range intentionally returns null so it never overwrites what the user
-// already picked.
 export function getPresetRange(reportType) {
   const today = dayjs();
 

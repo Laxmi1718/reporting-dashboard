@@ -1,8 +1,3 @@
-// Per-application backend wiring. Only LMS has a live endpoint today
-// (Reports/GetUtilizationData) - the rest keep running on mock data until
-// their APIs are ready. Add a `live: true` entry here to switch an app over;
-// everything downstream (cards, charts, comparison table) already reads off
-// the response shape, not the app name.
 export const APP_CONFIG = {
   LMS: {
     live: true,

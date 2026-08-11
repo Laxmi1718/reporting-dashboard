@@ -1,10 +1,3 @@
-// Deterministic mock data generator for apps that don't have a live backend
-// yet (see appConfig.js). Response shape mirrors what the real LMS endpoint
-// returns for currentPeriod/previousPeriod so the rest of the app doesn't
-// need to know whether it's looking at real or mock data. Training/e-learning
-// are intentionally omitted here - those only exist for apps whose API
-// actually reports them (LMS today).
-
 import { formatDMY } from '../utils/format';
 
 const APP_SCALE = {

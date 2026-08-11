@@ -4,7 +4,6 @@ import { generateDashboardReport } from './mockData';
 import { APP_CONFIG, isLive } from './appConfig';
 import { sumDailyCounts } from '../utils/dailyMetrics';
 
-// Mock transport - only apps without a live backend (see appConfig.js) hit this.
 const mockClient = axios.create({ baseURL: '/api' });
 const mock = new MockAdapter(mockClient, { delayResponse: 400 });
 
@@ -21,9 +20,6 @@ function toApiDateFormat(isoDate) {
   return `${day}/${month}/${year}`;
 }
 
-// Collapses the dailyNewLogin series (if the API reports it) into a single
-// per-period count, so the rest of the app can treat "new logins" like any
-// other metric on currentPeriod/previousPeriod instead of a nested series.
 function withNewLogins(period) {
   if (!period.dailyNewLogin) return period;
   return { ...period, newLogins: sumDailyCounts(period.dailyNewLogin) };
@@ -32,9 +28,6 @@ function withNewLogins(period) {
 function transformLiveResponse(raw, { app, reportType }) {
   const currentPeriod = withNewLogins(raw.currentPeriod);
   const previousPeriod = withNewLogins(raw.previousPeriod);
-  // The live endpoint only reports two snapshots (no historical series), so
-  // the trend chart shows exactly that - current vs. previous - rather than
-  // a fabricated multi-point history.
   const trend = [
     { label: previousPeriod.reportPeriod, logins: previousPeriod.totalLogin, activeUsers: previousPeriod.activeUsers },
     { label: currentPeriod.reportPeriod, logins: currentPeriod.totalLogin, activeUsers: currentPeriod.activeUsers },

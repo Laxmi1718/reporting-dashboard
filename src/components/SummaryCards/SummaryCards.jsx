@@ -36,10 +36,7 @@ export default function SummaryCards({ currentPeriod, loading, expectsNewLogins 
     },
   ];
 
-  // Only apps whose API reports a daily new-login series get this card
-  // (LMS today) - same data-driven pattern as Training/E-Learning. While
-  // loading, fall back to the live-app expectation so the card doesn't pop
-  // in after the fact and shift the grid.
+
   if (currentPeriod?.newLogins !== undefined || (loading && expectsNewLogins)) {
     cards.push({
       label: 'Unique Logins',

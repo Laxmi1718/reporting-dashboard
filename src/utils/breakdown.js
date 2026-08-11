@@ -1,7 +1,3 @@
-// Derives pie/donut slices from the nested trainingSessions/eLearning
-// objects the API reports. Training only reports assigned vs. completed
-// (no in-progress bucket), so it renders as two slices; e-learning reports
-// in-progress explicitly, so it keeps three.
 export function deriveTrainingBreakdown(trainingSessions) {
   if (!trainingSessions) return null;
   const completed = trainingSessions.completedUsers ?? 0;
