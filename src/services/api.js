@@ -15,11 +15,6 @@ mock.onGet('/dashboard/report').reply((config) => {
   return [200, generateDashboardReport({ app, reportType, fromDate, toDate })];
 });
 
-function toApiDateFormat(isoDate) {
-  const [year, month, day] = isoDate.split('-');
-  return `${day}/${month}/${year}`;
-}
-
 function withNewLogins(period) {
   if (!period.dailyNewLogin) return period;
   return { ...period, newLogins: sumDailyCounts(period.dailyNewLogin) };
@@ -36,13 +31,11 @@ function transformLiveResponse(raw, { app, reportType }) {
 }
 
 async function fetchLiveReport({ app, reportType, fromDate, toDate }) {
-  const config = APP_CONFIG[app];
-  const { data: raw } = await axios.get(`${config.baseURL}/Reports/GetUtilizationData`, {
+  const { data: raw } = await axios.get('/api/reports/lms', {
     params: {
-      startDate: toApiDateFormat(fromDate),
-      endDate: toApiDateFormat(toDate),
+      startDate: fromDate,
+      endDate: toDate,
     },
-    headers: { ApiKey: config.apiKey },
     timeout: 15000,
   });
 

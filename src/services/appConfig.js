@@ -1,8 +1,6 @@
 export const APP_CONFIG = {
   LMS: {
     live: true,
-    baseURL: import.meta.env.VITE_LMS_API_BASE_URL || 'https://lms-api.abisaio.com/api/v1',
-    apiKey: import.meta.env.VITE_LMS_API_KEY,
   },
   CRM: { live: false },
   Procurement: { live: false },
