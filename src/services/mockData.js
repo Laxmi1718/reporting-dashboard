@@ -1,4 +1,5 @@
 import { formatDMY } from '../utils/format';
+import { generateCRMReport } from './crmMockData';
 
 const APP_SCALE = {
   CRM: 1.6,
@@ -151,6 +152,10 @@ function rangeLabel(from, to) {
 }
 
 export function generateDashboardReport({ app, reportType, fromDate, toDate }) {
+  if (app === 'CRM') {
+    return generateCRMReport({ app, reportType, fromDate, toDate });
+  }
+
   const scale = APP_SCALE[app] ?? 1;
   const from = fromDate ? new Date(fromDate) : new Date();
   const to = toDate ? new Date(toDate) : new Date();

@@ -1,4 +1,6 @@
-export const APPLICATIONS = ['CRM', 'LMS','MYIB', 'Grim', 'IdeaBank', 'HRMS'];
+export const APPLICATIONS = ['All', 'LMS', 'CRM', 'MyIB', 'Abis Pro'];
+
+export const CRM_MODULES = ['All', 'Parivartan', 'Abis Pro (CRM)', 'Traders CRM', 'Chicks CRM', 'Doctor CRM'];
 
 export const REPORT_TYPES = [
   'Daily',

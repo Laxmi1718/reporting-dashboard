@@ -12,7 +12,7 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import RefreshIcon from '@mui/icons-material/Autorenew';
 import CheckIcon from '@mui/icons-material/Check';
 import dayjs from 'dayjs';
-import { APPLICATIONS, REPORT_TYPES } from '../../utils/constants';
+import { APPLICATIONS, CRM_MODULES, REPORT_TYPES } from '../../utils/constants';
 import { getPresetRange } from '../../utils/reportRange';
 
 const DEFAULT_APP = APPLICATIONS[0];

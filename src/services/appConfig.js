@@ -2,7 +2,10 @@ export const APP_CONFIG = {
   LMS: {
     live: true,
   },
-  CRM: { live: false },
+  CRM: { live: true },
+  MyIB: { live: true },
+  'Abis Pro': { live: false },
+  All: { live: false },
   Procurement: { live: false },
   IdeaBank: { live: false },
   HRMS: { live: false },

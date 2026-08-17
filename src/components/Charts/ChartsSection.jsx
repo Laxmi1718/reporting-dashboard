@@ -14,6 +14,8 @@ import LoginTrendChart from './LoginTrendChart';
 import ActiveUsersChart from './ActiveUsersChart';
 import TrainingCompletionChart from './TrainingCompletionChart';
 import ELearningProgressChart from './ELearningProgressChart';
+import CallsComparisonChart from './CallsComparisonChart';
+import CallsDirectionChart from './CallsDirectionChart';
 import { fetchDashboardReport } from '../../services/api';
 import { isLive } from '../../services/appConfig';
 import { buildTrendBucketRanges } from '../../utils/trendBuckets';
@@ -29,6 +31,8 @@ export default function ChartsSection({
   trend,
   trainingBreakdown,
   eLearningBreakdown,
+  callComparison,
+  callDirection,
   loading,
 }) {
   const [granularity, setGranularity] = useState(DEFAULT_GRANULARITY);
@@ -36,6 +40,15 @@ export default function ChartsSection({
   const [customTo, setCustomTo] = useState(() => dayjs(toDate));
   const [localTrend, setLocalTrend] = useState(trend ?? null);
   const [trendLoading, setTrendLoading] = useState(false);
+
+  useEffect(() => {
+    // Keep the chart in sync when the parent swaps in a different module's trend
+    // (e.g. switching the CRM module dropdown) without app/granularity changing.
+    if (app === 'CRM' && Array.isArray(trend)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setLocalTrend(trend);
+    }
+  }, [app, trend]);
 
   const handleGranularityChange = (value) => {
     if (value === CUSTOM) {
@@ -47,6 +60,12 @@ export default function ChartsSection({
 
   useEffect(() => {
     if (!app) return undefined;
+
+    if (app === 'CRM' && Array.isArray(trend) && trend.length) {
+      setLocalTrend(trend);
+      setTrendLoading(false);
+      return undefined;
+    }
 
     const range = granularity === CUSTOM ? { from: customFrom, to: customTo } : { from: dayjs(fromDate), to: dayjs(toDate) };
     if (!range.from?.isValid() || !range.to?.isValid()) return undefined;
@@ -60,20 +79,24 @@ export default function ChartsSection({
       if (isLive(app) && granularity !== CUSTOM) {
         const buckets = buildTrendBucketRanges(granularity, range.from, range.to);
         const results = await Promise.all(
-          buckets.map((bucket) =>
-            fetchDashboardReport({
-              app,
-              reportType: granularity,
-              fromDate: bucket.from.format('YYYY-MM-DD'),
-              toDate: bucket.to.format('YYYY-MM-DD'),
-            })
-              .then((report) => ({
+          buckets.map(async (bucket) => {
+            try {
+              const report = await fetchDashboardReport({
+                app,
+                reportType: granularity,
+                fromDate: bucket.from.format('YYYY-MM-DD'),
+                toDate: bucket.to.format('YYYY-MM-DD'),
+              });
+              const currentPeriod = report?.currentPeriod || {};
+              return {
                 label: bucket.label,
-                logins: report.currentPeriod.totalLogin,
-                activeUsers: report.currentPeriod.activeUsers,
-              }))
-              .catch(() => null),
-          ),
+                logins: Number(currentPeriod.totalLogin ?? currentPeriod.totalLogins ?? 0),
+                activeUsers: Number(currentPeriod.activeUsers ?? currentPeriod.totalActiveEmployees ?? 0),
+              };
+            } catch {
+              return null;
+            }
+          }),
         );
         return results.filter(Boolean);
       }
@@ -84,7 +107,7 @@ export default function ChartsSection({
         fromDate: range.from.format('YYYY-MM-DD'),
         toDate: range.to.format('YYYY-MM-DD'),
       });
-      return report.trend;
+      return report?.trend || [];
     };
 
     loadTrend()
@@ -104,7 +127,7 @@ export default function ChartsSection({
   }, [app, granularity, fromDate, toDate, customFrom, customTo]);
 
   if (loading && !localTrend) {
-    const skeletonCount = trainingBreakdown || eLearningBreakdown ? 4 : 2;
+    const skeletonCount = trainingBreakdown || eLearningBreakdown || callComparison || callDirection ? 4 : 2;
     return (
       <Stack spacing={1.5}>
         <Typography variant="h6">Charts</Typography>
@@ -174,6 +197,16 @@ export default function ChartsSection({
         {eLearningBreakdown && (
           <Grid size={{ xs: 12, md: 6 }}>
             <ELearningProgressChart data={eLearningBreakdown} />
+          </Grid>
+        )}
+        {callComparison && (
+          <Grid size={{ xs: 12, md: 6 }}>
+            <CallsComparisonChart data={callComparison} />
+          </Grid>
+        )}
+        {callDirection && (
+          <Grid size={{ xs: 12, md: 6 }}>
+            <CallsDirectionChart data={callDirection} />
           </Grid>
         )}
       </Grid>

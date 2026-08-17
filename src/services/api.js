@@ -30,14 +30,67 @@ function transformLiveResponse(raw, { app, reportType }) {
   return { app, reportType, currentPeriod, previousPeriod, trend };
 }
 
+async function fetchMyIbReport({ reportType, toDate }) {
+  const { data: raw } = await axios.get('/api/myib', {
+    params: {
+      reportUpdateDate: toDate,
+      reportType,
+    },
+    timeout: 60000,
+  });
+
+  if (!raw.IsSuccess) {
+    throw new Error(raw.Message || 'Failed to load MyIB report');
+  }
+
+  const d = raw.Data || {};
+  return {
+    app: 'MyIB',
+    reportType,
+    currentPeriod: {
+      reportPeriod: d.ReportDate,
+      period: d.Period,
+      lastLoginCount: d.LastLoginCount,
+      totalLoginCount: d.TotalLoginCount,
+      activeUsers: d.ActiveUsers,
+      averageActiveUsersPerDay: d.AverageActiveUsersPerDay,
+      loginAverage: d.LoginAverage,
+      utilizationPerDay: d.UtilizationPerDay || {},
+    },
+    previousPeriod: null,
+    trend: [],
+  };
+}
+
 async function fetchLiveReport({ app, reportType, fromDate, toDate }) {
-  const { data: raw } = await axios.get('/api/reports/lms', {
+  if (app === 'MyIB') {
+    return fetchMyIbReport({ reportType, toDate });
+  }
+
+  const endpoint = app === 'CRM' ? '/api/crm' : '/api/reports/lms';
+  const { data: raw } = await axios.get(endpoint, {
     params: {
       startDate: fromDate,
       endDate: toDate,
     },
-    timeout: 15000,
+    timeout: 60000,
   });
+
+  if (app === 'CRM') {
+    const payload = raw?.data && typeof raw.data === 'object' && !Array.isArray(raw.data) ? raw.data : raw;
+    if (!raw.success && !payload) {
+      throw new Error(raw.message || 'Failed to load CRM report');
+    }
+    return {
+      app,
+      reportType,
+      currentPeriod: payload?.currentPeriod || payload?.current || {},
+      previousPeriod: payload?.previousPeriod || payload?.previous || {},
+      trend: payload?.dailyData || payload?.dailyTrend || payload?.trend || [],
+      crm: raw,
+      appReports: payload?.appReports || raw?.appReports || [],
+    };
+  }
 
   if (!raw.succeeded) {
     throw new Error(raw.message || 'Failed to load report');
@@ -53,6 +106,17 @@ async function fetchMockReport({ app, reportType, fromDate, toDate }) {
 }
 
 export async function fetchDashboardReport({ app, reportType, fromDate, toDate }) {
+  if (app === 'All') {
+    return {
+      app,
+      reportType,
+      currentPeriod: {},
+      previousPeriod: {},
+      trend: [],
+      crm: null,
+    };
+  }
+
   if (isLive(app)) {
     return fetchLiveReport({ app, reportType, fromDate, toDate });
   }
