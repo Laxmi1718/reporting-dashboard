@@ -1,7 +1,7 @@
 
 export const BASE_METRICS = [
   { key: 'totalLogin', label: 'Total Logins', decimals: 0, get: (p) => Number(p.totalLogins ?? p.totalLogin ?? p.total_logins ?? 0) },
-  { key: 'activeUsers', label: 'Unique Users', decimals: 0, get: (p) => Number(p.uniqueUsers ?? p.activeUsers ?? p.totalActiveEmployees ?? p.totalUsers ?? 0) },
+  { key: 'activeUsers', label: 'Active Users', decimals: 0, get: (p) => Number(p.uniqueUsers ?? p.activeUsers ?? p.totalActiveEmployees ?? p.totalUsers ?? 0) },
   { key: 'averageActiveUsersPerDay', label: 'Average Active Users', decimals: 0, get: (p) => Number(p.averageActiveUsersPerDay ?? p.avgActiveUsersPerDay ?? 0) },
   { key: 'loginAveragePerUser', label: 'Login Average Per User', decimals: 1, get: (p) => Number(p.loginAveragePerUser ?? p.loginAverage ?? p.avgLoginsPerUser ?? 0) },
 ];

@@ -1,4 +1,4 @@
-export const APPLICATIONS = ['All', 'LMS', 'CRM', 'MyIB', 'Abis Pro'];
+export const APPLICATIONS = ['All', 'LMS', 'CRM', 'MyIB', 'IBREMS', 'Abis Pro'];
 
 export const CRM_MODULES = ['All', 'Parivartan', 'Abis Pro (CRM)', 'Traders CRM', 'Chicks CRM', 'Doctor CRM'];
 
@@ -24,6 +24,10 @@ export const CHART_COLORS = {
   green: '#008300',
   violet: '#4a3aa7',
   red: '#e34948',
+  // Lighter 30%-white-blend tints of blue/aqua, re-validated with the dataviz
+  // skill's palette checker (lightness band, CVD separation, contrast all pass).
+  blueLight: '#6aa1e2',
+  aquaLight: '#5fc7a2',
 };
 
 export const CATEGORICAL_SERIES = [

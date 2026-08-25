@@ -33,6 +33,11 @@ import MeetingRoomIcon from '@mui/icons-material/MeetingRoom';
 import BadgeIcon from '@mui/icons-material/Badge';
 import DirectionsCarIcon from '@mui/icons-material/DirectionsCar';
 import EventBusyIcon from '@mui/icons-material/EventBusy';
+import AssignmentTurnedInIcon from '@mui/icons-material/AssignmentTurnedIn';
+import AssignmentLateIcon from '@mui/icons-material/AssignmentLate';
+import VisibilityIcon from '@mui/icons-material/Visibility';
+import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
+import PersonAddIcon from '@mui/icons-material/PersonAdd';
 import FilterBar from '../../components/FilterBar/FilterBar';
 import SummaryCards from '../../components/SummaryCards/SummaryCards';
 import TrainingSection from '../../components/TrainingSection/TrainingSection';
@@ -41,6 +46,7 @@ import ChartsSection from '../../components/Charts/ChartsSection';
 import ComparisonTable from '../../components/ComparisonTable/ComparisonTable';
 import KpiCard from '../../components/SummaryCards/KpiCard';
 import MyIbChartsSection from '../../components/Charts/MyIbChartsSection';
+import CrmModuleComparisonCharts from '../../components/Charts/CrmModuleComparisonCharts';
 import useDashboardData from '../../hooks/useDashboardData';
 import { getPresetRange } from '../../utils/reportRange';
 import { deriveTrainingBreakdown, deriveELearningBreakdown } from '../../utils/breakdown';
@@ -110,6 +116,68 @@ function buildCallDirectionData(currentPeriod) {
   ];
 }
 
+function buildModuleView(report) {
+  const currentPeriod = report?.currentPeriod
+    ? {
+        ...report.currentPeriod,
+        reportPeriod: report.currentPeriod.dateRange
+          ? `${report.currentPeriod.dateRange.from} - ${report.currentPeriod.dateRange.to}`
+          : report.currentPeriod.reportPeriod || 'Current Period',
+      }
+    : null;
+
+  const previousPeriod = report?.previousPeriod
+    ? {
+        ...report.previousPeriod,
+        reportPeriod: report.previousPeriod.dateRange
+          ? `${report.previousPeriod.dateRange.from} - ${report.previousPeriod.dateRange.to}`
+          : report.previousPeriod.reportPeriod || 'Previous Period',
+      }
+    : null;
+
+  const trend = (() => {
+    if (Array.isArray(report?.dailyData) && report.dailyData.length) {
+      return report.dailyData.map((entry) => ({
+        ...entry,
+        label: entry.label || entry.date || 'N/A',
+        logins: Number(entry.logins ?? entry.totalLogins ?? entry.loginCount ?? 0),
+        activeUsers: Number(entry.activeUsers ?? entry.uniqueUsers ?? 0),
+      }));
+    }
+
+    const current = report?.currentPeriod || {};
+    const previous = report?.previousPeriod || {};
+
+    const currentLabel = current.dateRange
+      ? `${current.dateRange.from} - ${current.dateRange.to}`
+      : 'Current';
+    const previousLabel = previous.dateRange
+      ? `${previous.dateRange.from} - ${previous.dateRange.to}`
+      : 'Previous';
+
+    return [
+      {
+        label: previousLabel,
+        logins: Number(previous.totalLogins ?? previous.totalLogin ?? 0),
+        activeUsers: Number(previous.activeUsers ?? previous.uniqueUsers ?? 0),
+      },
+      {
+        label: currentLabel,
+        logins: Number(current.totalLogins ?? current.totalLogin ?? 0),
+        activeUsers: Number(current.activeUsers ?? current.uniqueUsers ?? 0),
+      },
+    ];
+  })();
+
+  return {
+    currentPeriod,
+    previousPeriod,
+    trend,
+    callComparison: buildCallComparisonData(currentPeriod, previousPeriod),
+    callDirection: buildCallDirectionData(currentPeriod),
+  };
+}
+
 const MYIB_UTILIZATION_DEFS = [
   { field: 'ItsmTicketsCreated', label: 'ITSM Tickets Created', icon: <ConfirmationNumberIcon />, color: CHART_COLORS.blue },
   { field: 'TravelDeskRequestCreated', label: 'Travel Desk Requests', icon: <FlightIcon />, color: CHART_COLORS.orange },
@@ -156,9 +224,9 @@ const CALL_CARD_DEFS = [
   { field: 'connectedCalls', label: 'Connected Calls', icon: <CallIcon />, color: CHART_COLORS.green },
   { field: 'missedCalls', label: 'Missed Calls', icon: <CallMissedIcon />, color: CHART_COLORS.red },
   { field: 'connectedIncomingCalls', label: 'Connected Incoming Calls', icon: <CallReceivedIcon />, color: CHART_COLORS.aqua },
-  { field: 'missedIncomingCalls', label: 'Missed Incoming Calls', icon: <CallMissedIcon />, color: CHART_COLORS.red },
+  { field: 'missedIncomingCalls', label: 'Missed Incoming Calls', icon: <CallMissedIcon />, color: CHART_COLORS.yellow },
   { field: 'connectedOutgoingCalls', label: 'Connected Outgoing Calls', icon: <CallMadeIcon />, color: CHART_COLORS.violet },
-  { field: 'missedOutgoingCalls', label: 'Missed Outgoing Calls', icon: <CallMissedIcon />, color: CHART_COLORS.red },
+  { field: 'missedOutgoingCalls', label: 'Missed Outgoing Calls', icon: <CallMissedIcon />, color: CHART_COLORS.magenta },
 ];
 
 function buildCrmCards(period) {
@@ -172,7 +240,7 @@ function buildCrmCards(period) {
 
   const uniqueUsers = period.uniqueUsers ?? period.activeUsers ?? period.totalActiveEmployees;
   if (uniqueUsers != null) {
-    cards.push({ label: 'Unique Users', value: formatNumber(uniqueUsers), icon: <GroupIcon />, color: CHART_COLORS.aqua });
+    cards.push({ label: 'Active Users', value: formatNumber(uniqueUsers), icon: <GroupIcon />, color: CHART_COLORS.aqua });
   }
 
   const totalLogins = period.totalLogins ?? period.totalLogin;
@@ -180,7 +248,11 @@ function buildCrmCards(period) {
     cards.push({ label: 'Total Logins', value: formatNumber(totalLogins), icon: <BarChartIcon />, color: CHART_COLORS.orange });
   }
 
-  if (period.totalEmployees != null) {
+  // Total Users already falls back to totalEmployees when a module has no distinct
+  // registered-users field (e.g. Parivartan) - showing Total Employees again there
+  // would just repeat the same number under a second label. Only show it separately
+  // when it's real, distinct data (e.g. Traders CRM: 42 registered vs 52 total).
+  if (period.totalEmployees != null && period.totalUsers != null) {
     cards.push({ label: 'Total Employees', value: formatNumber(period.totalEmployees), icon: <PeopleAltIcon />, color: CHART_COLORS.blue });
   }
 
@@ -215,6 +287,72 @@ function buildCrmCards(period) {
     CALL_CARD_DEFS.forEach(({ field, label, icon, color }) => {
       cards.push({ label, value: formatNumber(period[field]), icon, color });
     });
+  }
+
+  return cards;
+}
+
+function buildIbremsSummaryCards(period) {
+  if (!period) return [];
+  const cards = [];
+
+  if (period.totalLogin != null) {
+    cards.push({ label: 'Total Login', value: formatNumber(period.totalLogin), icon: <BarChartIcon />, color: CHART_COLORS.orange });
+  }
+  if (period.activeUsers != null) {
+    cards.push({ label: 'Active Users', value: formatNumber(period.activeUsers), icon: <GroupIcon />, color: CHART_COLORS.aqua });
+  }
+  if (period.newUsers != null) {
+    cards.push({ label: 'New Users', value: formatNumber(period.newUsers), icon: <PersonAddIcon />, color: CHART_COLORS.blue });
+  }
+  if (period.averageActiveUsersPerDay != null) {
+    cards.push({ label: 'Average Active Users / Day', value: formatNumber(period.averageActiveUsersPerDay), icon: <TrendingUpIcon />, color: CHART_COLORS.violet });
+  }
+  if (period.loginAveragePerUser != null) {
+    cards.push({ label: 'Login Average Per User', value: formatDecimal(period.loginAveragePerUser, 2), icon: <TrendingUpIcon />, color: CHART_COLORS.green });
+  }
+  if (period.lastLogin) {
+    cards.push({ label: 'Last Login', value: formatDateTime(period.lastLogin), icon: <BarChartIcon />, color: CHART_COLORS.yellow });
+  }
+
+  return cards;
+}
+
+function buildIbremsFormSubmitCards(formSubmit) {
+  if (!formSubmit) return [];
+  const cards = [];
+
+  if (formSubmit.totalSubmit != null) {
+    cards.push({ label: 'Total Submit', value: formatNumber(formSubmit.totalSubmit), icon: <AssignmentTurnedInIcon />, color: CHART_COLORS.blue });
+  }
+  if (formSubmit.failedSubmit != null) {
+    cards.push({ label: 'Failed Submit', value: formatNumber(formSubmit.failedSubmit), icon: <AssignmentLateIcon />, color: CHART_COLORS.red });
+  }
+  if (formSubmit.activeUsers != null) {
+    cards.push({ label: 'Active Users', value: formatNumber(formSubmit.activeUsers), icon: <GroupIcon />, color: CHART_COLORS.aqua });
+  }
+  if (formSubmit.submitAveragePerUser != null) {
+    cards.push({ label: 'Submit Average / User', value: formatDecimal(formSubmit.submitAveragePerUser, 2), icon: <TrendingUpIcon />, color: CHART_COLORS.violet });
+  }
+
+  return cards;
+}
+
+function buildIbremsDashboardViewCards(dashboardView) {
+  if (!dashboardView) return [];
+  const cards = [];
+
+  if (dashboardView.totalView != null) {
+    cards.push({ label: 'Total View', value: formatNumber(dashboardView.totalView), icon: <VisibilityIcon />, color: CHART_COLORS.blue });
+  }
+  if (dashboardView.failedView != null) {
+    cards.push({ label: 'Failed View', value: formatNumber(dashboardView.failedView), icon: <VisibilityOffIcon />, color: CHART_COLORS.red });
+  }
+  if (dashboardView.activeUsers != null) {
+    cards.push({ label: 'Active Users', value: formatNumber(dashboardView.activeUsers), icon: <GroupIcon />, color: CHART_COLORS.aqua });
+  }
+  if (dashboardView.viewAveragePerUser != null) {
+    cards.push({ label: 'View Average / User', value: formatDecimal(dashboardView.viewAveragePerUser, 2), icon: <TrendingUpIcon />, color: CHART_COLORS.green });
   }
 
   return cards;
@@ -265,6 +403,7 @@ export default function Dashboard({ onLogout }) {
   const isAll = filters.app === 'All';
   const isCRM = filters.app === 'CRM';
   const isMyIB = filters.app === 'MyIB';
+  const isIbrems = filters.app === 'IBREMS';
   const crmData = isCRM ? (data?.crm || data) : null;
   const appReports = crmData?.appReports || [];
   const moduleNames = ['Parivartan', 'Abis Pro (CRM)', 'Traders CRM', 'Chicks CRM', 'Doctor CRM'];
@@ -314,11 +453,27 @@ export default function Dashboard({ onLogout }) {
     </Box>
   );
 
-  const renderCRMOverview = () => (
-    <Stack spacing={2}>
-      <CRMModuleSummaryCards crmData={crmData} loading={loading} />
-    </Stack>
-  );
+  const renderCRMOverview = () => {
+    const moduleTotals = moduleNames
+      .map((name) => {
+        const moduleReport = getModuleReport(appReports, name);
+        return moduleReport
+          ? {
+              name,
+              totalLogins: moduleReport.currentPeriod?.totalLogins,
+              uniqueUsers: moduleReport.currentPeriod?.uniqueUsers,
+            }
+          : null;
+      })
+      .filter(Boolean);
+
+    return (
+      <Stack spacing={2}>
+        <CRMModuleSummaryCards crmData={crmData} loading={loading} />
+        <CrmModuleComparisonCharts moduleTotals={moduleTotals} />
+      </Stack>
+    );
+  };
 
   const renderMyIB = () => {
     const period = data?.currentPeriod || {};
@@ -362,60 +517,86 @@ export default function Dashboard({ onLogout }) {
     );
   };
 
-  const selectedModuleCurrentPeriod = activeModuleReport?.currentPeriod
-    ? {
-        ...activeModuleReport.currentPeriod,
-        reportPeriod: activeModuleReport.currentPeriod.dateRange
-          ? `${activeModuleReport.currentPeriod.dateRange.from} - ${activeModuleReport.currentPeriod.dateRange.to}`
-          : activeModuleReport.currentPeriod.reportPeriod || 'Current Period',
-      }
-    : null;
+  const renderIbrems = () => {
+    const period = data?.currentPeriod || {};
+    const summaryCards = buildIbremsSummaryCards(period);
+    const formSubmitCards = buildIbremsFormSubmitCards(period.formSubmit);
+    const dashboardViewCards = buildIbremsDashboardViewCards(period.dashboardView);
 
-  const selectedModulePreviousPeriod = activeModuleReport?.previousPeriod
-    ? {
-        ...activeModuleReport.previousPeriod,
-        reportPeriod: activeModuleReport.previousPeriod.dateRange
-          ? `${activeModuleReport.previousPeriod.dateRange.from} - ${activeModuleReport.previousPeriod.dateRange.to}`
-          : activeModuleReport.previousPeriod.reportPeriod || 'Previous Period',
-      }
-    : null;
+    return (
+      <Stack spacing={2}>
+        <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
+          <Typography variant="h6">IBREMS Dashboard</Typography>
+          {period.reportPeriod && (
+            <Typography variant="body2" color="text.secondary">
+              Report Period: {period.reportPeriod}
+            </Typography>
+          )}
+        </Stack>
 
-  const selectedModuleTrend = (() => {
-    if (Array.isArray(activeModuleReport?.dailyData) && activeModuleReport.dailyData.length) {
-      return activeModuleReport.dailyData.map((entry) => ({
-        ...entry,
-        label: entry.label || entry.date || 'N/A',
-        logins: Number(entry.logins ?? entry.totalLogins ?? entry.loginCount ?? 0),
-        activeUsers: Number(entry.activeUsers ?? entry.uniqueUsers ?? 0),
-      }));
-    }
+        <Grid container spacing={2}>
+          {summaryCards.map((card) => (
+            <Grid key={card.label} size={{ xs: 12, sm: 6, md: 3 }}>
+              <KpiCard {...card} loading={loading} />
+            </Grid>
+          ))}
+        </Grid>
 
-    const current = activeModuleReport?.currentPeriod || {};
-    const previous = activeModuleReport?.previousPeriod || {};
+        {(formSubmitCards.length > 0 || loading) && (
+          <Stack spacing={1.5}>
+            <Typography variant="h6">Form Submissions</Typography>
+            <Grid container spacing={2}>
+              {formSubmitCards.map((card) => (
+                <Grid key={card.label} size={{ xs: 12, sm: 6, md: 3 }}>
+                  <KpiCard {...card} loading={loading} />
+                </Grid>
+              ))}
+            </Grid>
+          </Stack>
+        )}
 
-    const currentLabel = current.dateRange
-      ? `${current.dateRange.from} - ${current.dateRange.to}`
-      : 'Current';
-    const previousLabel = previous.dateRange
-      ? `${previous.dateRange.from} - ${previous.dateRange.to}`
-      : 'Previous';
+        {(dashboardViewCards.length > 0 || loading) && (
+          <Stack spacing={1.5}>
+            <Typography variant="h6">Dashboard Views</Typography>
+            <Grid container spacing={2}>
+              {dashboardViewCards.map((card) => (
+                <Grid key={card.label} size={{ xs: 12, sm: 6, md: 3 }}>
+                  <KpiCard {...card} loading={loading} />
+                </Grid>
+              ))}
+            </Grid>
+          </Stack>
+        )}
 
-    return [
-      {
-        label: previousLabel,
-        logins: Number(previous.totalLogins ?? previous.totalLogin ?? 0),
-        activeUsers: Number(previous.activeUsers ?? previous.uniqueUsers ?? 0),
-      },
-      {
-        label: currentLabel,
-        logins: Number(current.totalLogins ?? current.totalLogin ?? 0),
-        activeUsers: Number(current.activeUsers ?? current.uniqueUsers ?? 0),
-      },
-    ];
-  })();
+        <ChartsSection
+          app={filters.app}
+          fromDate={filters.fromDate}
+          toDate={filters.toDate}
+          trend={data?.trend}
+          loading={loading}
+        />
 
-  const selectedModuleCallComparison = buildCallComparisonData(selectedModuleCurrentPeriod, selectedModulePreviousPeriod);
-  const selectedModuleCallDirection = buildCallDirectionData(selectedModuleCurrentPeriod);
+        <ComparisonTable
+          currentPeriod={data?.currentPeriod}
+          previousPeriod={data?.previousPeriod}
+          loading={loading}
+        />
+
+        <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'right' }}>
+          Date Range: {formatDMY(new Date(filters.fromDate))} - {formatDMY(new Date(filters.toDate))}
+        </Typography>
+      </Stack>
+    );
+  };
+
+  const {
+    currentPeriod: selectedModuleCurrentPeriod,
+    previousPeriod: selectedModulePreviousPeriod,
+    trend: selectedModuleTrend,
+    callComparison: selectedModuleCallComparison,
+    callDirection: selectedModuleCallDirection,
+  } = buildModuleView(activeModuleReport);
+
   const overviewCallComparison = buildCallComparisonData(data?.currentPeriod, data?.previousPeriod);
   const overviewCallDirection = buildCallDirectionData(data?.currentPeriod);
 
@@ -543,7 +724,7 @@ export default function Dashboard({ onLogout }) {
 
           {isAll && renderAllEmptyState()}
 
-          {!isCRM && !isAll && !isMyIB && (
+          {!isCRM && !isAll && !isMyIB && !isIbrems && (
             <>
               <SummaryCards currentPeriod={data?.currentPeriod} loading={loading} expectsNewLogins={expectsLiveExtras} />
               {(trainingSessions || (loading && expectsLiveExtras)) && (
@@ -595,6 +776,8 @@ export default function Dashboard({ onLogout }) {
           )}
 
           {isMyIB && renderMyIB()}
+
+          {isIbrems && renderIbrems()}
         </Stack>
       </Container>
 

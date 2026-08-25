@@ -62,9 +62,40 @@ async function fetchMyIbReport({ reportType, toDate }) {
   };
 }
 
+async function fetchIbremsReport({ reportType, fromDate, toDate }) {
+  const { data: raw } = await axios.get('/api/ibrems', {
+    params: {
+      startDate: fromDate,
+      endDate: toDate,
+    },
+    timeout: 60000,
+  });
+
+  if (!raw.succeeded) {
+    throw new Error(raw.message || 'Failed to load IBREMS report');
+  }
+
+  // previousPeriod support is unconfirmed for this API - guard rather than assume,
+  // unlike transformLiveResponse() which requires it (true for LMS).
+  const currentPeriod = raw.currentPeriod || {};
+  const previousPeriod = raw.previousPeriod || null;
+  const trend = previousPeriod
+    ? [
+      { label: previousPeriod.reportPeriod, logins: previousPeriod.totalLogin, activeUsers: previousPeriod.activeUsers },
+      { label: currentPeriod.reportPeriod, logins: currentPeriod.totalLogin, activeUsers: currentPeriod.activeUsers },
+    ]
+    : [];
+
+  return { app: 'IBREMS', reportType, currentPeriod, previousPeriod, trend };
+}
+
 async function fetchLiveReport({ app, reportType, fromDate, toDate }) {
   if (app === 'MyIB') {
     return fetchMyIbReport({ reportType, toDate });
+  }
+
+  if (app === 'IBREMS') {
+    return fetchIbremsReport({ reportType, fromDate, toDate });
   }
 
   const endpoint = app === 'CRM' ? '/api/crm' : '/api/reports/lms';

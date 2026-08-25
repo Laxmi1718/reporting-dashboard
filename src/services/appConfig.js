@@ -4,6 +4,7 @@ export const APP_CONFIG = {
   },
   CRM: { live: true },
   MyIB: { live: true },
+  IBREMS: { live: true },
   'Abis Pro': { live: false },
   All: { live: false },
   Procurement: { live: false },

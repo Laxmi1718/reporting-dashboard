@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Grid,
   Stack,
@@ -40,17 +40,20 @@ export default function ChartsSection({
   const [customTo, setCustomTo] = useState(() => dayjs(toDate));
   const [localTrend, setLocalTrend] = useState(trend ?? null);
   const [trendLoading, setTrendLoading] = useState(false);
+  const userRequestedFetchRef = useRef(false);
 
   useEffect(() => {
     // Keep the chart in sync when the parent swaps in a different module's trend
-    // (e.g. switching the CRM module dropdown) without app/granularity changing.
-    if (app === 'CRM' && Array.isArray(trend)) {
+    // (e.g. switching the CRM module dropdown, or a fresh LMS fetch from Apply)
+    // without the user explicitly asking for a different chart granularity.
+    if ((app === 'CRM' || app === 'LMS' || app === 'IBREMS') && Array.isArray(trend)) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setLocalTrend(trend);
     }
   }, [app, trend]);
 
   const handleGranularityChange = (value) => {
+    userRequestedFetchRef.current = true;
     if (value === CUSTOM) {
       setCustomFrom(dayjs(fromDate));
       setCustomTo(dayjs(toDate));
@@ -58,10 +61,23 @@ export default function ChartsSection({
     setGranularity(value);
   };
 
+  const handleCustomFromChange = (value) => {
+    userRequestedFetchRef.current = true;
+    setCustomFrom(value);
+  };
+
+  const handleCustomToChange = (value) => {
+    userRequestedFetchRef.current = true;
+    setCustomTo(value);
+  };
+
   useEffect(() => {
     if (!app) return undefined;
 
-    if (app === 'CRM' && Array.isArray(trend) && trend.length) {
+    const isUserRequestedFetch = userRequestedFetchRef.current;
+    userRequestedFetchRef.current = false;
+
+    if (!isUserRequestedFetch && (app === 'CRM' || app === 'LMS' || app === 'IBREMS') && Array.isArray(trend) && trend.length) {
       setLocalTrend(trend);
       setTrendLoading(false);
       return undefined;
@@ -91,7 +107,7 @@ export default function ChartsSection({
               return {
                 label: bucket.label,
                 logins: Number(currentPeriod.totalLogin ?? currentPeriod.totalLogins ?? 0),
-                activeUsers: Number(currentPeriod.activeUsers ?? currentPeriod.totalActiveEmployees ?? 0),
+                activeUsers: Number(currentPeriod.activeUsers ?? currentPeriod.uniqueUsers ?? currentPeriod.totalActiveEmployees ?? 0),
               };
             } catch {
               return null;
@@ -165,7 +181,7 @@ export default function ChartsSection({
               label="From"
               format="DD/MM/YYYY"
               value={customFrom}
-              onChange={setCustomFrom}
+              onChange={handleCustomFromChange}
               maxDate={customTo ?? undefined}
               slotProps={{ textField: { size: 'small' } }}
             />
@@ -173,7 +189,7 @@ export default function ChartsSection({
               label="To"
               format="DD/MM/YYYY"
               value={customTo}
-              onChange={setCustomTo}
+              onChange={handleCustomToChange}
               minDate={customFrom ?? undefined}
               slotProps={{ textField: { size: 'small' } }}
             />
